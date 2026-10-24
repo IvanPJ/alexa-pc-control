@@ -25,27 +25,64 @@ Pronto. A janela de configuração abre sozinha no final.
 
 Funciona no Windows 10 e 11. Não precisa de administrador nem de nenhum programa além da Steam.
 
-![Alexa PC Control](docs/screenshot.png)
+<p align="center"><img src="docs/painel-inicio.png" alt="Painel do Alexa PC Control" width="820"></p>
 
-## Configurar o Sinric Pro (uma vez, ~5 minutos)
+## Configurar (uma vez, ~5 minutos)
+
+No fim da instalação abre um **assistente de 5 passos**. Ele explica o que fazer em cada etapa, confere ao vivo se deu certo e só libera o próximo passo quando o atual funciona. Não precisa ler nada aqui pra conseguir; abaixo é só pra você saber o que vem pela frente.
 
 A Alexa não fala direto com o seu PC. Quem faz a ponte é o [Sinric Pro](https://sinric.pro), um serviço que já tem skill oficial na Alexa. O plano grátis cobre **3 dispositivos**, exatamente o que este projeto usa. Se quiser mais, cada dispositivo extra custa US$ 3 por ano.
 
-1. Crie uma conta grátis em **[sinric.pro](https://sinric.pro)**.
-2. No portal, abra **Credentials** e copie o **App Key** e o **App Secret**.
-3. Em **Devices**, crie estes 3 dispositivos. O nome é o que você vai falar pra Alexa, então pode trocar:
+### 1. Conta
 
-   | Nome | Tipo (Device Type) | Pra quê |
-   |---|---|---|
-   | **Modo Jogo** | Switch | Liga/desliga o modo jogo |
-   | **Computador** | TV | Desligar, volume, mídia, entrada de som, abrir jogo |
-   | **Modo Invisível** | Switch | Invisível/online na Steam |
+Crie uma conta grátis no [portal do Sinric Pro](https://portal.sinric.pro), abra **Credentials** e cole o **App Key** e o **App Secret**. O assistente avisa se você colar o código errado no campo errado e mostra **Conectado!** quando o PC falar com o Sinric. O segredo fica criptografado no Windows.
 
-4. Copie o **Device ID** de cada um.
-5. Abra a janela **Alexa PC Control** no Menu Iniciar, cole o App Key, o App Secret e os 3 IDs, escolha qual tela é a TV e clique em **SALVAR**. Em alguns segundos o status mostra **CONECTADO**.
-6. No app **Alexa** do celular: **Mais > Skills e jogos**, procure **Sinric Pro**, ative, entre com a sua conta do Sinric e toque em **Descobrir dispositivos**.
+<p align="center"><img src="docs/assistente-1-conta.png" alt="Passo 1: conta" width="720"></p>
 
-Pronto, os 3 aparecem no app Alexa como dispositivos normais.
+### 2. Dispositivos
+
+No portal, em **Devices › Add Device**, crie estes 3 e cole o **Device ID** de cada um. Cada cartão fica verde quando o ID está certo.
+
+| Nome | Device Type | Pra quê |
+|---|---|---|
+| **Modo Jogo** | Switch | Liga/desliga o modo jogo |
+| **Computador** | TV | Desligar, volume, mídia, saída de som, abrir jogo |
+| **Modo Invisível** | Switch | Invisível/online na Steam |
+
+<p align="center"><img src="docs/assistente-2-dispositivos.png" alt="Passo 2: dispositivos" width="720"></p>
+
+### 3. Alexa
+
+No app **Alexa** do celular, **Mais › Skills e jogos**, ative a skill **Sinric Pro** com a mesma conta e diga "Alexa, descobrir dispositivos". Depois fale "Alexa, aumenta o volume do computador": o assistente fica verde quando o comando chega no PC. Se travar, ele mostra sozinho o que conferir.
+
+<p align="center"><img src="docs/assistente-3-alexa.png" alt="Passo 3: Alexa" width="720"></p>
+
+### 4. TV
+
+Escolha qual tela é a TV (ele já sugere) e teste ligar e desligar o modo jogo pelo botão. **Identificar telas** mostra um número grande em cada tela ligada.
+
+<p align="center"><img src="docs/assistente-4-tv.png" alt="Passo 4: TV" width="720"></p>
+
+### 5. Teste
+
+Fale "Alexa, liga o modo jogo" e "Alexa, desliga o modo jogo". Cada comando fica verde quando chega no PC.
+
+<p align="center"><img src="docs/assistente-5-teste.png" alt="Passo 5: teste" width="720"></p>
+
+Pronto:
+
+<p align="center"><img src="docs/assistente-pronto.png" alt="Tudo pronto" width="720"></p>
+
+## O painel
+
+Depois do assistente, a mesma janela vira um painel. Abra pelo Menu Iniciar (**Alexa PC Control**) pra ver se está conectado, qual foi o último comando e mudar qualquer configuração. O botão **Salvar** só aparece quando você muda algo.
+
+| | |
+|---|---|
+| **Modo Jogo:** qual tela é a TV, TV como principal, Big Picture, fechar o jogo ao desligar | **Computador:** o que "desliga o computador" faz e o passo do volume |
+| <img src="docs/painel-modo-jogo.png" alt="Modo Jogo" width="420"> | <img src="docs/painel-computador.png" alt="Computador" width="420"> |
+| **Jogos:** atalhos por número, com apelidos (opcional) | **Conexão:** chave, segredo e IDs do Sinric |
+| <img src="docs/painel-jogos.png" alt="Jogos" width="420"> | <img src="docs/painel-conexao.png" alt="Conexão" width="420"> |
 
 ## O que falar
 
@@ -80,7 +117,7 @@ No app Alexa, em **Mais > Rotinas**, dá pra criar frases do seu jeito:
 Não. Um agente pequeno roda escondido e sobe sozinho quando você entra no Windows. A janela de configuração pode ficar fechada.
 
 **Dá pra ligar o PC pela Alexa?**
-Não. O agente roda no próprio PC: desligado ou suspenso, não tem quem escute. "Desliga o computador" funciona; "liga" só responde se o PC já estiver ligado.
+Sozinho, não. O agente roda no próprio PC: desligado ou suspenso, não tem quem escute. "Desliga o computador" funciona; "liga" só responde se o PC já estiver ligado. Pra acordar o PC precisa de algo sempre ligado na rede mandando um sinal de Wake-on-LAN, como uma plaquinha ESP32.
 
 **E depois de suspender?**
 Quando o PC acorda, o agente percebe e reconecta sozinho em poucos segundos.
@@ -107,7 +144,7 @@ Rode a linha de instalação de novo. Sua configuração é mantida.
 Abra a pasta `%LOCALAPPDATA%\AlexaPcControl` (cole isso na barra do Explorer) e dê duplo clique em `Desinstalar.bat`. Se o modo jogo estiver ligado, ele desliga antes. Os dispositivos continuam no Sinric e no app Alexa: apague por lá se não for mais usar.
 
 **Algo não funcionou.**
-Veja o `agente.log` na pasta `%LOCALAPPDATA%\AlexaPcControl`: cada comando da Alexa e o que o agente fez fica registrado.
+No painel, **Início › Ver log** abre o `agente.log`: cada comando da Alexa e o que o agente fez fica registrado. O assistente pode ser refeito a qualquer momento pelo **Início**, se algo ficar "não testado".
 
 ## Como funciona
 
@@ -130,7 +167,7 @@ Tudo roda como o seu usuário, sem administrador e sem instalar nada além do qu
 | `Pc.ps1` | Telas, áudio, teclas de mídia e janelas (APIs do Windows) |
 | `Steam.ps1` | Big Picture, jogos, status e a busca de jogo pelo nome |
 | `Config.ps1` | Formato do `config.json` e o App Secret criptografado |
-| `Configurar.ps1` / `Configurar.bat` | A janela de configuração |
+| `Configurar.ps1` / `Configurar.bat` | A janela: assistente de configuração e painel |
 | `config.json` | Sua configuração |
 | `Desinstalar.bat` / `uninstall.ps1` | Remove tudo |
 
