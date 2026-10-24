@@ -1,0 +1,29 @@
+{
+  "sinric": {
+    "appKey": "",
+    "appSecretProtected": "",
+    "devices": {
+      "gameMode": "",
+      "computer": "",
+      "invisibleMode": ""
+    }
+  },
+  "gameMode": {
+    "tvName": "",
+    "tvPath": "",
+    "audioName": "",
+    "tvPrimary": true,
+    "bigPicture": true,
+    "closeGameOnOff": false,
+    "waitTvSeconds": 30
+  },
+  "computer": {
+    "powerOff": "sleep",
+    "volumeStep": 10,
+    "inputs": [
+      { "input": "TV", "audioName": "" },
+      { "input": "AUX 1", "audioName": "" }
+    ]
+  },
+  "channels": []
+}
