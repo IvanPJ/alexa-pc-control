@@ -84,7 +84,7 @@ function Get-ApcTvAudio([string]$TvName) {
 
 function Enable-ApcGameMode {
     $gm = $Apc.Cfg.gameMode
-    if (-not $gm.tvPath -and -not $gm.tvName) { Write-ApcLog 'Modo jogo: nenhuma TV escolhida na configuração.'; Send-ApcEvent 'gameMode' 'setPowerState' @{ state = 'Off' }; return }
+    if (-not $gm.tvPath -and -not $gm.tvName) { Write-ApcLog 'Modo jogo: nenhuma TV escolhida na configuração.'; Send-ApcEvent 'gameMode' 'setPowerState' @{ state = 'Off' }; return $false }
 
     # the TV may still be waking up (a routine can turn it on right before calling this)
     $tv = $null
@@ -95,7 +95,7 @@ function Enable-ApcGameMode {
         if ((Get-Date) -gt $deadline) {
             Write-ApcLog ('Modo jogo: a TV "' + $gm.tvName + '" não apareceu em ' + $gm.waitTvSeconds + 's. Ela está ligada e na entrada do PC?')
             Send-ApcEvent 'gameMode' 'setPowerState' @{ state = 'Off' }
-            return
+            return $false
         }
         Start-Sleep -Seconds 1
     }
@@ -134,6 +134,7 @@ function Enable-ApcGameMode {
         Write-ApcLog 'Modo jogo: Big Picture aberto.'
         Move-ApcBigPictureToTv $tv.DevicePath
     }
+    return $true
 }
 
 # Big Picture opens on the primary screen; when the TV is not the primary one, move it there.
@@ -279,7 +280,7 @@ function Invoke-ApcRequest([string]$Role, [string]$Name, $Value) {
 
 function Invoke-ApcAfter([string]$What, $Arg) {
     switch ($What) {
-        'GameModeOn'  { Enable-ApcGameMode }
+        'GameModeOn'  { [void](Enable-ApcGameMode) }
         'GameModeOff' { Disable-ApcGameMode }
         'PowerOff'    { Write-ApcLog ('Computador: ' + $Apc.Cfg.computer.powerOff + '.'); Start-Sleep -Seconds 2; Stop-ApcComputer }
         'StartGame'   { Write-ApcLog ('Abrindo ' + $Arg.Name + ' (' + $Arg.AppId + ').'); Start-ApcGame $Arg.AppId }
@@ -351,9 +352,14 @@ function Invoke-ApcMessage([string]$Raw) {
     $msg = $Raw | ConvertFrom-Json
     if ($null -ne $msg.timestamp) { return }   # clock sync sent right after connecting
     $p = $msg.payload
-    if (-not $p -or $p.type -ne 'request') { return }
+    if (-not $p -or $p.type -ne 'request') {
+        if ($Raw.Length -gt 400) { $Raw = $Raw.Substring(0, 400) + '...' }
+        Write-ApcLog ('Sinric: ' + $Raw)
+        return
+    }
     if (-not (Test-ApcSignature $Raw $msg)) {
         Write-ApcLog 'Mensagem com assinatura inválida recusada (o App Secret está certo?).'
+        Write-ApcStatus @{ warning = 'Chegou um comando da Alexa, mas a assinatura não bateu: o segredo do app (App Secret) parece errado.' }
         Send-ApcResponse $p (New-ApcFailure 'Signature is invalid')
         return
     }
@@ -366,7 +372,7 @@ function Invoke-ApcMessage([string]$Raw) {
     catch { $result = New-ApcFailure ('Erro: ' + $_.Exception.Message) }
     if (-not $result.Ok) { Write-ApcLog ('  falhou: ' + $result.Message) }
     Send-ApcResponse $p $result
-    Write-ApcStatus @{ lastCommand = $summary; lastCommandAt = (Get-Date).ToString('o'); lastCommandOk = [bool]$result.Ok }
+    Write-ApcStatus @{ lastCommand = $summary; lastCommandAt = (Get-Date).ToString('o'); lastCommandOk = [bool]$result.Ok; lastCommandRole = $role; lastCommandAction = [string]$p.action; warning = '' }
 
     # slow work runs after answering, so Alexa does not give up waiting
     if ($result.After) {
@@ -412,7 +418,7 @@ function Invoke-ApcSession {
     try {
         if (-not $ws.ConnectAsync([Uri]$Server, [Threading.CancellationToken]::None).Wait(20000)) { throw 'tempo esgotado' }
         Write-ApcLog ('Conectado ao Sinric Pro (' + $Apc.Roles.Count + ' dispositivos).')
-        Write-ApcStatus @{ state = 'conectado'; message = ''; since = (Get-Date).ToString('o') }
+        Write-ApcStatus @{ state = 'conectado'; message = ''; detail = ''; warning = ''; since = (Get-Date).ToString('o') }
         $Apc.Backoff = 0
         Send-ApcEvent 'computer' 'setPowerState' @{ state = 'On' }
 
@@ -448,6 +454,13 @@ function Get-ApcErrorText($ErrorRecord) {
     return $e.Message
 }
 
+# What the config window shows: the cause in plain words, never the raw .NET message.
+function Get-ApcFriendlyError([string]$Text) {
+    if ($Text -match '401|403|Unauthori|Autorizad|Forbidden|Proibido') { return 'O Sinric recusou a chave do app (App Key). Confira em Credentials no site do Sinric.' }
+    if ($Text -match 'resolv|nome remoto|remote name|Impossível conectar|Unable to connect|recus|refused|tempo esgotado|timed? ?out|tempo limite') { return 'Sem internet ou o Sinric está fora do ar. Tentando de novo sozinho.' }
+    return 'Não conectou ao Sinric (' + $Text + '). Tentando de novo sozinho.'
+}
+
 function Start-ApcAgent {
     $name = 'Local\AlexaPcControlAgent'
     if ($Server -ne 'wss://ws.sinric.pro') { $name += '-' + ($Server -replace '[^\w]', '_') }   # a test agent next to the real one
@@ -472,7 +485,7 @@ function Start-ApcAgent {
         } catch {
             $text = Get-ApcErrorText $_
             Write-ApcLog ('Sem conexão com o Sinric Pro: ' + $text)
-            Write-ApcStatus @{ state = 'desconectado'; message = $text }
+            Write-ApcStatus @{ state = 'desconectado'; message = (Get-ApcFriendlyError $text); detail = $text }
         }
         $wait = $delays[[Math]::Min($Apc.Backoff, $delays.Count - 1)]
         $Apc.Backoff++
@@ -486,10 +499,13 @@ function Start-ApcAgent {
 if ($Action) {
     [Apc.Windows]::UsePhysicalPixels()
     [void](Update-ApcConfig)
-    switch ($Action) {
-        'GameModeOn'  { Enable-ApcGameMode }
-        'GameModeOff' { Disable-ApcGameMode }
-    }
-    return
+    # exit code for the config window: 0 done, 1 the TV is not set or did not show up, 2 error
+    try {
+        switch ($Action) {
+            'GameModeOn'  { if (-not (Enable-ApcGameMode)) { exit 1 } }
+            'GameModeOff' { Disable-ApcGameMode }
+        }
+    } catch { Write-ApcLog ('Erro em ' + $Action + ': ' + $_.Exception.Message); exit 2 }
+    exit 0
 }
 Start-ApcAgent

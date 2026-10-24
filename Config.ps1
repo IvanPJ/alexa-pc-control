@@ -71,7 +71,5 @@ function Set-ApcSecret($Cfg, [string]$Plain) {
 function Get-ApcMissingSetup($Cfg) {
     if (-not $Cfg.sinric.appKey) { return 'Falta o App Key do Sinric Pro.' }
     if (-not (Get-ApcSecret $Cfg)) { return 'Falta o App Secret do Sinric Pro.' }
-    $d = $Cfg.sinric.devices
-    if (-not ($d.gameMode -or $d.computer -or $d.invisibleMode)) { return 'Falta o ID de pelo menos um dispositivo.' }
     return $null
 }
